@@ -38,6 +38,6 @@ struct cb_settings {
 extern struct cb_settings cb_settings;
 extern struct cb_logger cb_logger;
 extern uv_loop_t *cb_loop;
-extern uv_tcp_t cb_server;
+extern uv_tcp_t *cb_server;
 
 #endif /* __COMMON_H_INC */

@@ -72,7 +72,7 @@ void cb_write_onwrite(uv_fs_t *req) {
 void cb_write(uv_file *fd, ssize_t nread, const uv_buf_t *buf) {
     uv_fs_t *req = (uv_fs_t *)malloc(sizeof(uv_fs_t));
     uv_buf_t wrbuf = uv_buf_init(buf->base, nread);
-    cb_logger.log(DEBG, "Writing %d bytes to file!\n", nread);
+    cb_logger.log(DEBG, "Writing %d bytes to file %d: ```\n%.*s```\n", nread, *((int *)fd), nread, buf->base);
     uv_fs_write(cb_loop, req, *fd, &wrbuf, 1, 0, cb_write_onwrite);
 }
 
@@ -98,6 +98,7 @@ void cb_write_onopen(uv_fs_t *req) {
     /* store the resultant fd */
     *rptr = req->result;
     *fdptr = (void *)rptr;
+    cb_logger.log(DEBG, "Successfully opened output file as fd #%d\n", *rptr);
 
     uv_fs_req_cleanup(req);
 }
@@ -123,7 +124,7 @@ int cb_write_start(void **fdptr) {
 
     cb_logger.log(DEBG, "Opening file %s for writing!\n", slug);
 
-    r = uv_fs_open(cb_loop, file, slug, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR, &cb_write_onopen);
+    r = uv_fs_open(cb_loop, file, slug, O_CREAT | O_APPEND, S_IRUSR | S_IWUSR, &cb_write_onopen);
     if (r) {
         cb_logger.log(WARN, "Failed to open output file `%s`\n", slug);
         free(slug);

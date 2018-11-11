@@ -16,6 +16,8 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
         cb_logger.log(DEBG, "Read %d bytes from client!\n", nread);
         cb_write((uv_file *)client->data, nread, buf);
         /* cb_write will free the buffer */
+    } if (nread == 0) {
+        fprintf(stderr, "Done!");
     }
 }
 
@@ -61,10 +63,14 @@ int cb_read_init() {
     if (!cb_loop)
         cb_loop = uv_default_loop();
 
-    /* Initialize server */
-    uv_tcp_init(cb_loop, &cb_server);
-    uv_ip4_addr(cb_settings.host, cb_settings.port, &addr);
-    uv_tcp_bind(&cb_server, (const struct sockaddr*)&addr, 0);
+    /* Allocate memory for server */
+    cb_server = malloc(sizeof(uv_tcp_t));
+    if (!cb_server) return UV_ENOMEM;
 
-    return uv_listen((uv_stream_t*)&cb_server, 128, &cb_read_onconn);
+    /* Initialize server */
+    uv_tcp_init(cb_loop, cb_server);
+    uv_ip4_addr(cb_settings.host, cb_settings.port, &addr);
+    uv_tcp_bind(cb_server, (const struct sockaddr*)&addr, 0);
+
+    return uv_listen((uv_stream_t*)cb_server, 128, &cb_read_onconn);
 }
