@@ -34,6 +34,14 @@ struct cb_settings {
     uint32_t max_size;
 };
 
+struct rw_ifdata {
+    /* IMPORTANT HACK to keep client first so that when uv goes to free stuff
+     we aren't trying to free a pointer inside of an allocated space */
+    uv_tcp_t client;
+    uv_file fd;
+    uv_stream_t *server;
+};
+
 /* global variables */
 extern struct cb_settings cb_settings;
 extern struct cb_logger cb_logger;
