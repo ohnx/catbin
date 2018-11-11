@@ -101,13 +101,27 @@ void cb_write(struct rw_ifdata *data, ssize_t nread, const uv_buf_t *buf) {
     uv_fs_write(cb_loop, req, data->fd, &wrbuf, 1, 0, cb_write_onwrite);
 }
 
+void cb_write_onopen_onwrite(uv_write_t* req, int status) {
+    if (status < 0) {
+        cb_logger.log(WARN, "Failed to communicate with client: %s\n", uv_strerror(status));
+    }
+    free(req);
+}
+
 void cb_write_onopen(uv_fs_t *req) {
+    uv_write_t *wreq;
     struct rw_ifdata *data = (struct rw_ifdata *)req->data;
+    uv_buf_t bufs[] = {
+        {.base = (char *)cb_settings.url, .len = cb_settings.url_len},
+        {.base = data->slug, .len = 0}
+    };
 
     /* error occurred */
     if (req->result < 0) {
         cb_logger.log(WARN, "Failed to open output file: %s\n", uv_strerror(req->result));
         uv_fs_req_cleanup(req);
+        free(req);
+        free(data->slug);
         return;
     }
 
@@ -118,42 +132,51 @@ void cb_write_onopen(uv_fs_t *req) {
     uv_fs_req_cleanup(req);
     free(req);
 
+    /* write the network request */
+    wreq = malloc(sizeof(uv_write_t));
+    if (!req) {
+        cb_logger.log(WARN, "OOM in server\n");
+        free(data->slug);
+        return;
+    }
+
     /* start listening for incoming messages */
     if (!uv_accept(data->server, (uv_stream_t *)&data->client)) {
-        uv_read_start((uv_stream_t *)&data->client, &cb_read_alloc, *cb_read_ondata);
+        uv_read_start((uv_stream_t *)&data->client, &cb_read_alloc, cb_read_ondata);
+        bufs[1].len = strlen(data->slug);
+        uv_write(wreq, (uv_stream_t *)&data->client, bufs, 2, cb_write_onopen_onwrite);
     } else {
         /* failed to accept() */
         uv_close((uv_handle_t *)&data->client, (uv_close_cb)free);
     }
+    free(data->slug);
 }
 
 int cb_write_start(struct rw_ifdata *data) {
     int r;
-    char *slug;
     uv_fs_t *file;
 
     /* allocate slug */
-    if ((r = cb_write_allocslug(&slug))) return r;
+    if ((r = cb_write_allocslug(&(data->slug)))) return r;
 
     /* allocate space for file handler */
     file = malloc(sizeof(uv_fs_t));
     if (!file) {
         cb_logger.log(WARN, "OOM error when trying to allocate memory for output file\n");
-        free(slug);
+        free(data->slug);
         return UV_ENOMEM;
     }
 
-    cb_logger.log(DEBG, "Opening file %s for writing!\n", slug);
+    cb_logger.log(DEBG, "Opening file %s for writing!\n", data->slug);
     file->data = data;
 
-    r = uv_fs_open(cb_loop, file, slug, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR, &cb_write_onopen);
+    r = uv_fs_open(cb_loop, file, data->slug, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR, &cb_write_onopen);
     if (r) {
-        cb_logger.log(WARN, "Failed to open output file `%s`\n", slug);
-        free(slug);
+        cb_logger.log(WARN, "Failed to open output file `%s`\n", data->slug);
+        free(data->slug);
         free(file);
         return UV_ENOMEM;
     }
-    free(slug);
     return 0;
 }
 

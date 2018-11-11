@@ -11,6 +11,7 @@ struct cb_settings {
      * e.g. "https://example.com/" will output "https://example.com/xxxxxx"
      */
     const char *url;
+    uint16_t url_len;
 
     /**
      * @brief Host to bind to
@@ -40,6 +41,7 @@ struct rw_ifdata {
     uv_tcp_t client;
     uv_file fd;
     uv_stream_t *server;
+    char *slug;
 };
 
 /* global variables */
