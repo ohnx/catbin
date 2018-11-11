@@ -11,7 +11,7 @@ int cb_write_allocslug(char **slug) {
     FILE *f;
     uint8_t slug_len = cb_settings.slug_len_min;
     void *ptr;
-    *slug = (char *)malloc(sizeof(char) * (slug_len + 1));
+    *slug = malloc(sizeof(char) * (slug_len + 1));
 
     if (!(*slug)) {
         cb_logger.log(WARN, "OOM error when trying to allocate memory for slug\n");
@@ -61,24 +61,43 @@ int cb_write_allocslug(char **slug) {
 }
 
 void cb_write_stop(struct rw_ifdata *data) {
-    close(data->fd);
+    /* allocate space for file handler */
+    uv_fs_t *req = malloc(sizeof(uv_fs_t));
+
+    if (!req) {
+        cb_logger.log(WARN, "OOM error when trying to allocate memory for output file\n");
+        return;
+    }
+
+    uv_fs_close(cb_loop, req, data->fd, (uv_fs_cb)free);
 }
 
 void cb_write_onwrite(uv_fs_t *req) {
     if (req->result < 0) {
         cb_logger.log(WARN, "Nonzero status from uv_write(): %s\n", uv_strerror(req->result));
+    } else {
+        cb_logger.log(DEBG, "Wrote %d bytes to file!\n", req->result);
     }
-    cb_logger.log(DEBG, "Wrote %d bytes to file!\n", req->result);
+
     free(req->data);
     uv_fs_req_cleanup(req);
     free(req);
 }
 
 void cb_write(struct rw_ifdata *data, ssize_t nread, const uv_buf_t *buf) {
-    uv_fs_t *req = (uv_fs_t *)malloc(sizeof(uv_fs_t));
-    uv_buf_t wrbuf = uv_buf_init(buf->base, nread);
+    uv_fs_t *req;
+    uv_buf_t wrbuf;
+
+    req = malloc(sizeof(uv_fs_t));
+    if (!req) {
+        cb_logger.log(WARN, "OOM in server\n");
+        free(buf->base);
+        return;
+    }
+
+    wrbuf = uv_buf_init(buf->base, nread);
     req->data = buf->base;
-    cb_logger.log(DEBG, "Writing %d bytes to file %d: ```\n%.*s```\n", nread, data->fd, nread, buf->base);
+    cb_logger.log(DEBG, "Writing %d bytes to file %d\n", nread, data->fd);
     uv_fs_write(cb_loop, req, data->fd, &wrbuf, 1, 0, cb_write_onwrite);
 }
 
@@ -117,7 +136,7 @@ int cb_write_start(struct rw_ifdata *data) {
     if ((r = cb_write_allocslug(&slug))) return r;
 
     /* allocate space for file handler */
-    file = (uv_fs_t *)malloc(sizeof(uv_fs_t));
+    file = malloc(sizeof(uv_fs_t));
     if (!file) {
         cb_logger.log(WARN, "OOM error when trying to allocate memory for output file\n");
         free(slug);

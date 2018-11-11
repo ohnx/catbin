@@ -7,11 +7,11 @@ void cb_read_alloc(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
 }
 
 void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
-    if (nread < 0) {
+    if (nread <= 0) {
         if (nread != UV_EOF) {
             cb_logger.log(WARN, "Read error %s\n", uv_err_name(nread));
         } else {
-            cb_logger.log(DEBG, "Client disconnected and file written!\n");
+            cb_logger.log(INFO, "Client disconnected and file written!\n");
         }
         cb_write_stop(client->data);
         uv_close((uv_handle_t *)client, (uv_close_cb)free);
@@ -40,7 +40,7 @@ void cb_read_onconn(uv_stream_t *server, int status) {
     data->client.data = data;
     data->server = server;
 
-    cb_logger.log(DEBG, "Initiating new connection!\n");
+    cb_logger.log(INFO, "Initiating new connection!\n");
     /* open the file and stuff */
     cb_write_start(data);
 
