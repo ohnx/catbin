@@ -2,25 +2,40 @@
 
 (net)cat whatever you want to upload!
 
+Inspired by [solusipse/fiche](https://github.com/solusipse/fiche), but does not
+have the requirement of regular text files (binary ones supported too).
+There is no exact file size limit (I have successfully uploaded a 2GiB file over the internet),
+but I would recommend finding a more purpose-built tool for larger files.
+
+## Performance
+catbin uses evented I/O through libuv, so hopefully it is pretty fast and
+resistant to some attacks.
+
+I don't personally do any optimizations at all.
+
 ## Example usage (client)
 
 ```
-$ cat upload.zip | nc example.com 9674
+$ cat upload.zip | nc example.com 7777 -q 0
 http://example.com/sd2e
 ```
 
 ## Example usage (server)
 
-To run `catbin`:
+To build `catbin`:
 ```
 $ # install libuv development headers+library (e.g. libuv1-dev on debian)
 $ git clone https://github.com/ohnx/catbin
 ...
 $ make
 ...
-$ ./catbin
 ```
 
-Some form of web server must also be provided. Catbin stores uploaded data as files in the directory.
+To run `catbin`:
+```
+$ ./catbin -d "https://example.com/"
+```
+
+Some form of web server must also be provided. catbin stores uploaded data as files in the directory.
 Simply serving the files should suffice.
 
