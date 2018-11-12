@@ -10,7 +10,7 @@ struct cb_settings {
      * @brief URL used in links
      * e.g. "https://example.com/" will output "https://example.com/xxxxxx"
      */
-    const char *url;
+    char *url;
     uint16_t url_len;
 
     /**

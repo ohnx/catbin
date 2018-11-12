@@ -12,75 +12,58 @@ void cb_main_onsigint(uv_signal_t *handle, int signum) {
 }
 
 
-int main() {
-    int r;
+int main(int argc, char **argv) {
+    int r, opt;
     uv_signal_t *sigint;
 
     /* initialize logger */
     cb_logger_init();
 
     /* default config options */
+    cb_settings.port = 7777;
     cb_settings.slug_len_min = 4;
     cb_settings.host = "0.0.0.0";
-    cb_settings.port = 8791;
-    cb_settings.url = "http://paste.example.com/";
-    cb_settings.url_len = strlen(cb_settings.url);
+    cb_settings.url = NULL;
+    cb_settings.url_len = 0;
 
-#if 0
-    while ((opt = getopt(argc, argv, "s:h:p:d:")) != -1) {
+    while ((opt = getopt(argc, argv, "p:s:b:d:h")) != -1) {
         switch (opt) {
         case 'p':
             /* port */
             cb_settings.port = atoi(optarg);
             if (cb_settings.port < 0 || cb_settings.port > 65535) {
                 cb_logger.log(FATL, "Invalid port specified\n");
-                return 53;
+                return -1;
             }
             break;
         case 's':
-            /* minimun slug length */
-            if (server_sf == MAILBOX)
-                server_sf = BOTH;
-            else
-                server_sf = STDOUT;
+            /* minimum slug length */
+            cb_settings.slug_len_min = atoi(optarg);
             break;
-        case 'm':
-            /* maildir */
-            if (chdir(optarg)) {
-                /* failed to cd to directory */
-                print_usage(argv[0], "invalid output directory for mail");
-                return 63;
-            }
-            if (server_sf == STDOUT)
-                server_sf = BOTH;
-            else
-                server_sf = MAILBOX;
+        case 'b':
+            /* bindhost */
+            cb_settings.host = optarg;
             break;
-        case 'k':
-            if (ssl_key) {
-                print_usage(argv[0], "only 1 private key allowed");
-                return 17;
-            }
-            ssl_key = optarg;
-            enable_ssl++;
+        case 'd':
+            /* domain/url */
+            cb_settings.url = optarg;
+            cb_settings.url_len = strlen(cb_settings.url);
+            if (cb_settings.url[cb_settings.url_len-1] != '/')
+                cb_logger.log(WARN, "Given domain does not end with a /; this may cause domains to appear incorrectly.\n");
             break;
-        case 'c':
-            if (ssl_cert) {
-                print_usage(argv[0], "only 1 certificate allowed");
-                return 19;
-            }
-            ssl_cert = optarg;
-            enable_ssl++;
-            break;
-        case 'u':
-            break;
+        case 'h':
         default:
-            /* unknown flag */
-            cb_logger.log(FATL, "Unknown flag `%c`\n", opt);
+            fprintf(stderr, "Usage:\n");
+            fprintf(stderr, "\t%s [-p port (defaults to 7777)] [-s minimum slug length (defaults to 4)]\n\t\t", argv[0]);
+            fprintf(stderr, "[-b bindhost (defaults to 0.0.0.0)] [-d domain]\n");
             return -1;
         }
     }
-#endif
+
+    if (cb_settings.url == NULL) {
+        cb_logger.log(FATL, "Domain required; please run `%s -h` for help\n", argv[0]);
+        return -1;
+    }
 
     sigint = malloc(sizeof(uv_signal_t));
     if (!sigint) {
