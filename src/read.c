@@ -7,7 +7,7 @@ void cb_read_alloc(uv_handle_t *handle, size_t suggested_size, uv_buf_t *buf) {
 }
 
 void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
-    if (nread <= 0) {
+    if (nread < 0) {
         if (nread != UV_EOF) {
             cb_logger.log(WARN, "Read error %s\n", uv_err_name(nread));
         } else {
@@ -20,6 +20,8 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
         cb_logger.log(DEBG, "Read %d bytes from client!\n", nread);
         cb_write((struct rw_ifdata *)client->data, nread, buf);
         /* cb_write will free the buffer */
+    } else {
+        free(buf->base);
     }
 }
 

@@ -13,6 +13,7 @@ http://example.com/sd2e
 
 To run `catbin`:
 ```
+$ # install libuv development headers+library (e.g. libuv1-dev on debian)
 $ git clone https://github.com/ohnx/catbin
 ...
 $ make
