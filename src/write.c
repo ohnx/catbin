@@ -170,7 +170,7 @@ int cb_write_start(struct rw_ifdata *data) {
     cb_logger.log(DEBG, "Opening file %s for writing!\n", data->slug);
     file->data = data;
 
-    r = uv_fs_open(cb_loop, file, data->slug, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR, &cb_write_onopen);
+    r = uv_fs_open(cb_loop, file, data->slug, O_CREAT | O_APPEND | O_WRONLY, S_IRUSR | S_IWUSR | S_IROTH | S_IRGRP, &cb_write_onopen);
     if (r) {
         cb_logger.log(WARN, "Failed to open output file `%s`\n", data->slug);
         free(data->slug);
