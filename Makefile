@@ -1,4 +1,6 @@
-CFLAGS=-Wall -Werror -Iinclude/ -luv
+CFLAGS+=-Wall -Werror -Iinclude/ -std=c99 -D_GNU_SOURCE
+# pkg-config --libs libuv
+LDFLAGS+=-luv -lrt -lpthread -lnsl -ldl
 OUTPUT=catbin
 OBJS=objs/main.o objs/log.o objs/common.o objs/read.o objs/write.o
 
@@ -10,7 +12,7 @@ objs/%.o: src/%.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 $(OUTPUT): $(OBJS)
-	$(CC) $^ -o $(OUTPUT) $(CFLAGS)
+	$(CC) $^ -o $(OUTPUT) $(CFLAGS) $(LDFLAGS)
 
 .PHONY: clean
 clean:

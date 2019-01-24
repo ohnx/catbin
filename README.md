@@ -20,6 +20,12 @@ $ cat upload.zip | nc example.com 7777 -q 0
 http://example.com/sd2e
 ```
 
+```
+$ # note that the -H 'Expect:' is not necessary but is preferred.
+$ curl http://example.com:7777/ -H 'Expect:' --upload-file upload.zip 
+http://example.com/sd2e
+```
+
 ## Example usage (server)
 
 To build `catbin`:
@@ -37,5 +43,5 @@ $ ./catbin -d "https://example.com/"
 ```
 
 Some form of web server must also be provided. catbin stores uploaded data as files in the directory.
-Simply serving the files should suffice.
-
+Simply serving the files should suffice. Pair it with [nginx-guess-mime](https://github.com/ohnx/nginx-guess-mime)
+to return the correct MIME types for the files, too!

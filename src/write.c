@@ -84,7 +84,7 @@ void cb_write_onwrite(uv_fs_t *req) {
     free(req);
 }
 
-void cb_write(struct rw_ifdata *data, ssize_t nread, const uv_buf_t *buf) {
+void cb_write(struct rw_ifdata *data, ssize_t nread, ssize_t offset, const uv_buf_t *buf) {
     uv_fs_t *req;
     uv_buf_t wrbuf;
 
@@ -95,26 +95,62 @@ void cb_write(struct rw_ifdata *data, ssize_t nread, const uv_buf_t *buf) {
         return;
     }
 
-    wrbuf = uv_buf_init(buf->base, nread);
+    wrbuf = uv_buf_init(buf->base + offset, nread);
     req->data = buf->base;
-    cb_logger.log(DEBG, "Writing %d bytes to file %d\n", nread, data->fd);
+    cb_logger.log(DEBG, "Writing %d bytes to fd #%d\n", nread, data->fd);
     uv_fs_write(cb_loop, req, data->fd, &wrbuf, 1, 0, cb_write_onwrite);
 }
 
-void cb_write_onopen_onwrite(uv_write_t* req, int status) {
+void cb_write_hello_onwrite(uv_write_t* req, int status) {
     if (status < 0) {
         cb_logger.log(WARN, "Failed to communicate with client: %s\n", uv_strerror(status));
     }
+
+    free(((struct rw_ifdata *)req->data)->slug);
     free(req);
 }
 
-void cb_write_onopen(uv_fs_t *req) {
+void cb_write_hello(struct rw_ifdata *data) {
     uv_write_t *wreq;
+
+    /* the network write request */
+    wreq = malloc(sizeof(uv_write_t));
+    if (!wreq) {
+        cb_logger.log(WARN, "OOM in server\n");
+        free(data->slug);
+        return;
+    }
+    wreq->data = data;
+
+    if (data->flags == 1) {
+        /* raw request */
+        uv_buf_t bufs[] = {
+            {.base = (char *)cb_settings.url, .len = cb_settings.url_len},
+            {.base = data->slug, .len = 0},
+            {.base = "\n", .len = 1}
+        };
+
+        bufs[1].len = strlen(data->slug);
+        uv_write(wreq, (uv_stream_t *)&data->client, bufs, 3, cb_write_hello_onwrite);
+    } else if (data->flags == 2) {
+        /* http request */
+#define http_hdr "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n"
+        uv_buf_t bufs[] = {
+            /* Too lazy to send content-length here */
+            {.base = http_hdr, .len = sizeof(http_hdr) - 1},
+            {.base = (char *)cb_settings.url, .len = cb_settings.url_len},
+            {.base = data->slug, .len = 0},
+            {.base = "\r\n", .len = 2}
+        };
+#undef http_hdr
+
+        bufs[2].len = strlen(data->slug);
+        uv_write(wreq, (uv_stream_t *)&data->client, bufs, 4, cb_write_hello_onwrite);
+    }
+}
+
+void cb_write_onopen(uv_fs_t *req) {
     struct rw_ifdata *data = (struct rw_ifdata *)req->data;
-    uv_buf_t bufs[] = {
-        {.base = (char *)cb_settings.url, .len = cb_settings.url_len},
-        {.base = data->slug, .len = 0}
-    };
 
     /* error occurred */
     if (req->result < 0) {
@@ -129,27 +165,17 @@ void cb_write_onopen(uv_fs_t *req) {
     data->fd = req->result;
     cb_logger.log(DEBG, "Successfully opened output file as fd #%d\n", data->fd);
 
+    /* clean up open request */
     uv_fs_req_cleanup(req);
     free(req);
-
-    /* write the network request */
-    wreq = malloc(sizeof(uv_write_t));
-    if (!req) {
-        cb_logger.log(WARN, "OOM in server\n");
-        free(data->slug);
-        return;
-    }
 
     /* start listening for incoming messages */
     if (!uv_accept(data->server, (uv_stream_t *)&data->client)) {
         uv_read_start((uv_stream_t *)&data->client, &cb_read_alloc, cb_read_ondata);
-        bufs[1].len = strlen(data->slug);
-        uv_write(wreq, (uv_stream_t *)&data->client, bufs, 2, cb_write_onopen_onwrite);
     } else {
         /* failed to accept() */
         uv_close((uv_handle_t *)&data->client, (uv_close_cb)free);
     }
-    free(data->slug);
 }
 
 int cb_write_start(struct rw_ifdata *data) {
@@ -177,6 +203,7 @@ int cb_write_start(struct rw_ifdata *data) {
         free(file);
         return UV_ENOMEM;
     }
+
     return 0;
 }
 

@@ -25,8 +25,9 @@ int main(int argc, char **argv) {
     cb_settings.host = "0.0.0.0";
     cb_settings.url = NULL;
     cb_settings.url_len = 0;
+    cb_settings.max_size = 0;
 
-    while ((opt = getopt(argc, argv, "p:s:b:d:h")) != -1) {
+    while ((opt = getopt(argc, argv, "p:s:b:d:m:h")) != -1) {
         switch (opt) {
         case 'p':
             /* port */
@@ -51,11 +52,19 @@ int main(int argc, char **argv) {
             if (cb_settings.url[cb_settings.url_len-1] != '/')
                 cb_logger.log(WARN, "Given domain does not end with a /; this may cause domains to appear incorrectly.\n");
             break;
+        case 'm':
+            /* max file size */
+            cb_settings.max_size = atol(optarg);
+            if (cb_settings.max_size < 0) {
+                cb_logger.log(FATL, "Invalid max file size specified\n");
+                return -1;
+            }
+            break;
         case 'h':
         default:
             fprintf(stderr, "Usage:\n");
             fprintf(stderr, "\t%s [-p port (defaults to 7777)] [-s minimum slug length (defaults to 4)]\n\t\t", argv[0]);
-            fprintf(stderr, "[-b bindhost (defaults to 0.0.0.0)] [-d domain]\n");
+            fprintf(stderr, "[-b bindhost (defaults to 0.0.0.0)] [-d domain] [-m max file size in bytes (defaults to 0 = unlimited )]\n");
             return -1;
         }
     }

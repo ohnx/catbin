@@ -30,9 +30,9 @@ struct cb_settings {
     uint8_t slug_len_min;
 
     /**
-     * @brief Maximum permitted file size
+     * @brief Maximum permitted file size (in bytes)
      */
-    uint32_t max_size;
+    ssize_t max_size;
 };
 
 struct rw_ifdata {
@@ -42,6 +42,9 @@ struct rw_ifdata {
     uv_file fd;
     uv_stream_t *server;
     char *slug;
+    unsigned char flags;
+    ssize_t d_written;
+    ssize_t d_expected;
 };
 
 /* global variables */
