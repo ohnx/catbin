@@ -24,20 +24,38 @@ int strncasecmp(const char *a, const char *b, ssize_t n) {
 }
 #endif
 
+void cb_read_close(uv_timer_t* handle) {
+    uv_stream_t *client = (uv_stream_t *)handle->data;
+    uv_timer_stop(handle);
+    cb_write_stop(client->data);
+    uv_close((uv_handle_t *)client, (uv_close_cb)free);
+    uv_close((uv_handle_t *)handle, (uv_close_cb)free);
+}
+
 void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
     struct rw_ifdata *data = (struct rw_ifdata *)client->data;
+    uv_timer_t *close_timeout;
     ssize_t offset = 0, q = 0;
 
     if (nread < 0) {
         if (nread != UV_EOF) {
             cb_logger.log(WARN, "Read error %s\n", uv_err_name(nread));
         } else {
-            cb_logger.log(INFO, "Client disconnected and file written!\n");
+            cb_logger.log(INFO, "Client disconnected!\n");
         }
 
-        cb_write_stop(client->data);
-        uv_close((uv_handle_t *)client, (uv_close_cb)free);
         free(buf->base);
+        close_timeout = malloc(sizeof(uv_timer_t));
+        if (!close_timeout) {
+            /* close immediately */
+            cb_write_stop(client->data);
+            uv_close((uv_handle_t *)client, (uv_close_cb)free);
+        } else {
+            /* close with timeout */
+            close_timeout->data = client;
+            uv_timer_init(cb_loop, close_timeout);
+            uv_timer_start(close_timeout, cb_read_close, 500, 0);
+        }
     } else if (nread > 0) {
         cb_logger.log(DEBG, "Read %d bytes from client!\n", nread);
     rset:
@@ -103,12 +121,25 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
         case 4: /* HTTP PUT data */
             /* check we have enough space */
             if (data->d_expected && data->d_written + (nread - offset) >= data->d_expected) {
-                /*if (data->d_expected == cb_settings.max_size)*/
+                if (data->d_expected == cb_settings.max_size)
                     cb_logger.log(INFO, "Data limit of %d reached for fd #%d!\n", data->d_expected, data->fd);
+                else
+                    cb_logger.log(INFO, "Client done sending file!\n");
+
                 cb_write(data, data->d_expected - data->d_written, offset, buf);
                 /* cb_write will free the buffer */
-                cb_write_stop(client->data);
-                uv_close((uv_handle_t *)client, (uv_close_cb)free);
+
+                close_timeout = malloc(sizeof(uv_timer_t));
+                if (!close_timeout) {
+                    /* close immediately */
+                    cb_write_stop(client->data);
+                    uv_close((uv_handle_t *)client, (uv_close_cb)free);
+                } else {
+                    /* close with timeout */
+                    close_timeout->data = client;
+                    uv_timer_init(cb_loop, close_timeout);
+                    uv_timer_start(close_timeout, cb_read_close, 500, 0);
+                }
                 break;
             }
 

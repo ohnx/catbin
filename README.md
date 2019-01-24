@@ -22,7 +22,7 @@ http://example.com/sd2e
 
 ```
 $ # note that the -H 'Expect:' is not necessary but is preferred.
-$ curl http://example.com:7777/ -H 'Expect:' --upload-file upload.zip 
+$ curl http://example.com:7777/ -H 'Expect:' --progress-bar --upload-file upload.zip 
 http://example.com/sd2e
 ```
 
