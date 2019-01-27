@@ -22,7 +22,7 @@ http://example.com/sd2e
 
 ```
 $ # note that the -H 'Expect:' is not necessary but is preferred.
-$ curl http://example.com:7777/ -H 'Expect:' --progress-bar --upload-file upload.zip 
+$ curl http://example.com:7777/ -H 'Expect:' --progress-bar --upload-file upload.zip | tee /dev/null;
 http://example.com/sd2e
 ```
 
@@ -32,9 +32,8 @@ To build `catbin`:
 ```
 $ # install libuv development headers+library (e.g. libuv1-dev on debian)
 $ git clone https://github.com/ohnx/catbin
-...
+$ cd catbin
 $ make
-...
 ```
 
 To run `catbin`:
@@ -45,3 +44,10 @@ $ ./catbin -d "https://example.com/"
 Some form of web server must also be provided. catbin stores uploaded data as files in the directory.
 Simply serving the files should suffice. Pair it with [nginx-guess-mime](https://github.com/ohnx/nginx-guess-mime)
 to return the correct MIME types for the files, too!
+
+### SSL/TLS
+
+catbin itself does not support SSL/TLS. However, with the addition of the new HTTPS stuff,
+it is now possible to have a reverse proxy with catbin (although this will limit usage to
+only being with `curl`/`wget` family). Simply have a `proxy_pass http://[catbin endpoint]/;`
+to make this work in an nginx config!
