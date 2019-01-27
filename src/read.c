@@ -67,9 +67,13 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
                 /* this is a HTTP request */
                 cb_logger.log(DEBG, "HTTP PUT request for fd #%d!\n", data->fd);
                 data->flags = 2;
+            } else if (*(buf->base) == 0x16) {
+                /* TLS request */
+                cb_logger.log(DEBG, "TLS request for fd #%d!\n", data->fd);
+                data->flags = 1;
             } else {
                 /* regular request */
-                cb_logger.log(DEBG, "Binary request for fd #%d!\n", data->fd);
+                cb_logger.log(DEBG, "Binary request for fd #%d! %x %x\n", data->fd, *(buf->base), *(buf->base+1));
                 data->flags = 1;
             }
             /* write the hello message */
@@ -104,6 +108,7 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
             }
             if (offset > nread || *(buf->base + offset) == '\0') {
                 /* end of string, we have consumed the entire buffer without reaching a double CRLF */
+                free(buf->base);
                 break;
             } else if (*(buf->base + offset) == '\r' && *(buf->base + offset + 1) == '\n') {
                 /* CRLF reached */
@@ -145,7 +150,7 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
 
             /* not a problem */
             cb_write(data, nread - offset, offset, buf);
-            data->d_written += nread;
+            data->d_written += nread - offset;
             break;
         }
     } else {
