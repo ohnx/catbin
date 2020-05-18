@@ -63,8 +63,8 @@ int main(int argc, char **argv) {
         case 'h':
         default:
             fprintf(stderr, "Usage:\n");
-            fprintf(stderr, "\t%s [-p port (defaults to 7777)] [-s minimum slug length (defaults to 4)]\n\t\t", argv[0]);
-            fprintf(stderr, "[-b bindhost (defaults to 0.0.0.0)] [-d domain] [-m max file size in bytes (defaults to 0 = unlimited )]\n");
+            fprintf(stderr, "\t%s [-p port (defaults to 7777)]\n\t\t[-s minimum slug length (defaults to 4)]\n\t\t", argv[0]);
+            fprintf(stderr, "[-b bindhost (defaults to 0.0.0.0)]\n\t\t[-d domain]\n\t\t[-m max file size in bytes (defaults to 0 = unlimited )]\n");
             return -1;
         }
     }

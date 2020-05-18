@@ -35,6 +35,13 @@ struct cb_settings {
     ssize_t max_size;
 };
 
+/* flags */
+#define FLAG_INITIAL_READ           0
+#define FLAG_BINARY_DATA            1
+#define FLAG_HTTP_PUT_HEADERS       2
+#define FLAG_HTTP_PUT_DATA          4
+#define FLAG_HTTP_OPTIONS_HEADERS   8
+
 struct rw_ifdata {
     /* IMPORTANT HACK to keep client first so that when uv goes to free stuff
      we aren't trying to free a pointer inside of an allocated space */

@@ -60,26 +60,25 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
         cb_logger.log(DEBG, "Read %d bytes from client!\n", nread);
     rset:
         switch (data->flags) {
-        case 0:
-            /* flag = 0 means initial read */
+        case FLAG_INITIAL_READ:
             /* check if this data starts with "PUT /" */
             if (!strncmp("PUT /", buf->base, sizeof("PUT /") - 1)) {
                 /* this is a HTTP request */
                 cb_logger.log(DEBG, "HTTP PUT request for fd #%d!\n", data->fd);
-                data->flags = 2;
+                data->flags = FLAG_HTTP_PUT_HEADERS;
             } else if (*(buf->base) == 0x16) {
                 /* TLS request */
                 cb_logger.log(DEBG, "TLS request for fd #%d!\n", data->fd);
-                data->flags = 1;
+                data->flags = FLAG_BINARY_DATA;
             } else {
                 /* regular request */
                 cb_logger.log(DEBG, "Binary request for fd #%d! %x %x\n", data->fd, *(buf->base), *(buf->base+1));
-                data->flags = 1;
+                data->flags = FLAG_BINARY_DATA;
             }
             /* write the hello message */
             cb_write_hello(data);
             goto rset;
-        case 2:
+        case FLAG_HTTP_PUT_HEADERS:
             /* consume the headers and stuff */
             cb_logger.log(DEBG, "Consuming headers for fd #%d!\n", data->fd);
         consume:
@@ -121,9 +120,9 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
                 cb_logger.log(DEBG, "Data starting for fd #%d!\n", data->fd);
                 offset += 4; /* skip past the \r\n\r\n */
             }
-            data->flags = 4;
-        case 1: /* regular data */
-        case 4: /* HTTP PUT data */
+            data->flags = FLAG_HTTP_PUT_DATA;
+        case FLAG_BINARY_DATA: /* regular data */
+        case FLAG_HTTP_PUT_DATA: /* HTTP PUT data */
             /* check we have enough space */
             if (data->d_expected && data->d_written + (nread - offset) >= data->d_expected) {
                 if (data->d_expected == cb_settings.max_size)
@@ -174,7 +173,7 @@ void cb_read_onconn(uv_stream_t *server, int status) {
     }
     data->client.data = data;
     data->server = server;
-    data->flags = 0;
+    data->flags = FLAG_INITIAL_READ;
     data->d_written = 0;
     data->d_expected = cb_settings.max_size;
 

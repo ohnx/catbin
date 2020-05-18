@@ -122,7 +122,7 @@ void cb_write_hello(struct rw_ifdata *data) {
     }
     wreq->data = data;
 
-    if (data->flags == 1) {
+    if (data->flags == FLAG_BINARY_DATA) {
         /* raw request */
         uv_buf_t bufs[] = {
             {.base = (char *)cb_settings.url, .len = cb_settings.url_len},
@@ -132,7 +132,7 @@ void cb_write_hello(struct rw_ifdata *data) {
 
         bufs[1].len = strlen(data->slug);
         uv_write(wreq, (uv_stream_t *)&data->client, bufs, 3, cb_write_hello_onwrite);
-    } else if (data->flags == 2) {
+    } else if (data->flags == FLAG_HTTP_PUT_HEADERS) {
         /* http request */
 #define http_hdr "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n"
         uv_buf_t bufs[] = {
