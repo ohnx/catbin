@@ -150,7 +150,7 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
 
             /* not a problem */
             cb_write(data, nread - offset, offset, buf);
-            data->d_written += nread - offset;
+            data->d_written += nread;
             break;
         }
     } else {
