@@ -41,6 +41,7 @@ struct cb_settings {
 #define FLAG_HTTP_PUT_HEADERS       2
 #define FLAG_HTTP_PUT_DATA          4
 #define FLAG_HTTP_OPTIONS_HEADERS   8
+#define FLAG_CONN_CLOSING           16
 
 struct rw_ifdata {
     /* IMPORTANT HACK to keep client first so that when uv goes to free stuff

@@ -44,18 +44,12 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
             cb_logger.log(INFO, "Client disconnected!\n");
         }
 
-        free(buf->base);
-        close_timeout = malloc(sizeof(uv_timer_t));
-        if (!close_timeout) {
+        if (data->flags != FLAG_CONN_CLOSING) {
             /* close immediately */
             cb_write_stop(client->data);
             uv_close((uv_handle_t *)client, (uv_close_cb)free);
-        } else {
-            /* close with timeout */
-            close_timeout->data = client;
-            uv_timer_init(cb_loop, close_timeout);
-            uv_timer_start(close_timeout, cb_read_close, 500, 0);
-        }
+            free(buf->base);
+        } /* otherwise we are already going to close it */
     } else if (nread > 0) {
         cb_logger.log(DEBG, "Read %d bytes from client!\n", nread);
     rset:
@@ -145,6 +139,7 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
                     uv_close((uv_handle_t *)client, (uv_close_cb)free);
                 } else {
                     /* close with timeout */
+                    data->flags = FLAG_CONN_CLOSING;
                     close_timeout->data = client;
                     uv_timer_init(cb_loop, close_timeout);
                     uv_timer_start(close_timeout, cb_read_close, 500, 0);

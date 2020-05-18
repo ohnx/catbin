@@ -134,7 +134,7 @@ void cb_write_hello(struct rw_ifdata *data) {
         uv_write(wreq, (uv_stream_t *)&data->client, bufs, 3, cb_write_hello_onwrite);
     } else if (data->flags == FLAG_HTTP_PUT_HEADERS) {
         /* http PUT request */
-#define http_put_hdr "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n"
+#define http_put_hdr "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\nAccess-Control-Allow-Origin: *\r\n\r\n"
         uv_buf_t bufs[] = {
             /* Too lazy to send content-length here */
             {.base = http_put_hdr, .len = sizeof(http_put_hdr) - 1},
