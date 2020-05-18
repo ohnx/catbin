@@ -44,11 +44,12 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
             cb_logger.log(INFO, "Client disconnected!\n");
         }
 
+        free(buf->base);
+
         if (data->flags != FLAG_CONN_CLOSING) {
             /* close immediately */
             cb_write_stop(client->data);
             uv_close((uv_handle_t *)client, (uv_close_cb)free);
-            free(buf->base);
         } /* otherwise we are already going to close it */
     } else if (nread > 0) {
         cb_logger.log(DEBG, "Read %d bytes from client!\n", nread);
@@ -132,6 +133,7 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
                 cb_write(data, data->d_expected - data->d_written, offset, buf);
                 /* cb_write will free the buffer */
 
+            goodbyecleanup:
                 close_timeout = malloc(sizeof(uv_timer_t));
                 if (!close_timeout) {
                     /* close immediately */
@@ -151,6 +153,9 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
             cb_write(data, nread - offset, offset, buf);
             data->d_written += nread;
             break;
+        case FLAG_HTTP_OPTIONS_HEADERS:
+            free(buf->base);
+            goto goodbyecleanup;
         }
     } else {
         free(buf->base);
