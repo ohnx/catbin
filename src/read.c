@@ -63,9 +63,14 @@ void cb_read_ondata(uv_stream_t *client, ssize_t nread, const uv_buf_t *buf) {
         case FLAG_INITIAL_READ:
             /* check if this data starts with "PUT /" */
             if (!strncmp("PUT /", buf->base, sizeof("PUT /") - 1)) {
-                /* this is a HTTP request */
+                /* this is a HTTP PUT request */
                 cb_logger.log(DEBG, "HTTP PUT request for fd #%d!\n", data->fd);
                 data->flags = FLAG_HTTP_PUT_HEADERS;
+            } else if (!strncmp("OPTIONS /", buf->base, sizeof("OPTIONS /") - 1)) {
+                /* this is a HTTP OPTIONS request */
+                cb_logger.log(DEBG, "HTTP OPTIONS request for fd #%d!\n", data->fd);
+                data->flags = FLAG_HTTP_OPTIONS_HEADERS;
+                data->d_expected = 0;
             } else if (*(buf->base) == 0x16) {
                 /* TLS request */
                 cb_logger.log(DEBG, "TLS request for fd #%d!\n", data->fd);

@@ -133,19 +133,29 @@ void cb_write_hello(struct rw_ifdata *data) {
         bufs[1].len = strlen(data->slug);
         uv_write(wreq, (uv_stream_t *)&data->client, bufs, 3, cb_write_hello_onwrite);
     } else if (data->flags == FLAG_HTTP_PUT_HEADERS) {
-        /* http request */
-#define http_hdr "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n"
+        /* http PUT request */
+#define http_put_hdr "HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\nConnection: close\r\n\r\n"
         uv_buf_t bufs[] = {
             /* Too lazy to send content-length here */
-            {.base = http_hdr, .len = sizeof(http_hdr) - 1},
+            {.base = http_put_hdr, .len = sizeof(http_put_hdr) - 1},
             {.base = (char *)cb_settings.url, .len = cb_settings.url_len},
             {.base = data->slug, .len = 0},
             {.base = "\r\n", .len = 2}
         };
-#undef http_hdr
+#undef http_put_hdr
 
         bufs[2].len = strlen(data->slug);
         uv_write(wreq, (uv_stream_t *)&data->client, bufs, 4, cb_write_hello_onwrite);
+    } else if (data->flags == FLAG_HTTP_OPTIONS_HEADERS) {
+        /* http OPTIONS request */
+#define http_opts_hdr "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: PUT, OPTIONS\r\nAccess-Control-Allow-Headers: Content-Type\r\nConnection: close\r\n\r\n"
+        uv_buf_t bufs[] = {
+            /* Too lazy to send content-length here */
+            {.base = http_opts_hdr, .len = sizeof(http_opts_hdr) - 1},
+        };
+#undef http_opts_hdr
+
+        uv_write(wreq, (uv_stream_t *)&data->client, bufs, 1, cb_write_hello_onwrite);
     }
 }
 
